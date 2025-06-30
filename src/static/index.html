@@ -46,5 +46,77 @@
     </footer>
 
     <script src="app.js"></script>
+    <script>
+      // Enhance activity card rendering to include participants
+      async function loadActivities() {
+        const res = await fetch('/activities');
+        const activities = await res.json();
+        const list = document.getElementById('activities-list');
+        list.innerHTML = '';
+        Object.entries(activities).forEach(([name, info]) => {
+          const card = document.createElement('div');
+          card.className = 'activity-card';
+          card.innerHTML = `
+            <h4>${name}</h4>
+            <p>${info.description}</p>
+            <p><strong>Schedule:</strong> ${info.schedule}</p>
+            <p><strong>Max Participants:</strong> ${info.max_participants}</p>
+            <div class="participants-section">
+              <strong>Participants:</strong>
+              ${
+                info.participants.length > 0
+                  ? `<ul class="participants-list">${info.participants.map(email => `<li>${email}</li>`).join('')}</ul>`
+                  : `<span class="no-participants">No participants yet.</span>`
+              }
+            </div>
+          `;
+          list.appendChild(card);
+        });
+      }
+
+      // Populate activity select options
+      async function loadActivityOptions() {
+        const res = await fetch('/activities');
+        const activities = await res.json();
+        const select = document.getElementById('activity');
+        select.innerHTML = '<option value="">-- Select an activity --</option>';
+        Object.keys(activities).forEach(name => {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        });
+      }
+
+      // Signup form handler
+      document.getElementById('signup-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const email = document.getElementById('email').value;
+        const activity = document.getElementById('activity').value;
+        const messageDiv = document.getElementById('message');
+        messageDiv.className = 'hidden';
+        messageDiv.textContent = '';
+        try {
+          const res = await fetch(`/activities/${encodeURIComponent(activity)}/signup?email=${encodeURIComponent(email)}`, { method: 'POST' });
+          const data = await res.json();
+          if (res.ok) {
+            messageDiv.className = 'message success';
+            messageDiv.textContent = data.message;
+            await loadActivities();
+          } else {
+            messageDiv.className = 'message error';
+            messageDiv.textContent = data.detail || 'Signup failed';
+          }
+        } catch {
+          messageDiv.className = 'message error';
+          messageDiv.textContent = 'Network error';
+        }
+        messageDiv.classList.remove('hidden');
+      });
+
+      // Initial load
+      loadActivities();
+      loadActivityOptions();
+    </script>
   </body>
 </html>
